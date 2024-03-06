@@ -31,9 +31,7 @@
 
 ############################################################################################################################################################
 # Variables
-$token = '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'
-$owner = 'RichardHallade'
-$repo = 'crl'
+
 $path = 'awareness/results/$FileName'
 $url = "https://raw.githubusercontent.com/$owner/$repo/master/$path"
 
