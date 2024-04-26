@@ -1,16 +1,16 @@
-# Définir le chemin du dossier pour le fichier de logs
+# Definir le chemin du dossier pour le fichier de logs
 $logFolderPath = 'C:\temp'
 
-# Vérifier si le dossier existe, sinon le créer
+# Verifier si le dossier existe, sinon le creer
 if (-not (Test-Path -Path $logFolderPath -PathType Container)) {
     Write-Host "Creating log folder: $logFolderPath"
     New-Item -Path $logFolderPath -ItemType Directory | Out-Null
 }
 
-# Définir le chemin du fichier de logs
+# Definir le chemin du fichier de logs
 $logFilePath = Join-Path -Path $logFolderPath -ChildPath 'installation_log.txt'
 
-# Fonction pour écrire dans le fichier de logs
+# Fonction pour ecrire dans le fichier de logs avec deetails des installations
 function Write-Log {
     param(
         [string]$message
@@ -22,7 +22,7 @@ function Write-Log {
 
 Write-Log "Script started"
 
-# Vérifier si le module PSWindowsUpdate est déjà installé
+# Verifier si le module PSWindowsUpdate est deja installe
 if ($null -eq (Get-Module -Name PSWindowsUpdate -ListAvailable)) {
     Write-Log "Installing NuGet package provider"
     Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
@@ -35,21 +35,19 @@ if ($null -eq (Get-Module -Name PSWindowsUpdate -ListAvailable)) {
 
 Write-Log "Force-checking for updates"
 
-# Vérifier les mises à jour disponibles
-$availableUpdates = Get-WindowsUpdate -Install -AcceptAll -AutoReboot
-
-# Log pour chaque mise à jour disponible
-foreach ($update in $availableUpdates) {
-    Write-Log "Available update: $($update.Title) (KB $($update.KnowledgebaseArticles))"
-}
-
-Write-Log "Starting Windows Update installation"
+# Verifier les mises a jour installees avec deetails
 $installedUpdates = Get-WUInstall -AcceptAll -Install -AutoReboot
 
-# Log pour chaque patch installé
+# Log pour chaque patch installee avec details
 foreach ($update in $installedUpdates) {
-    Write-Log "Installed patch: $($update.Title) (KB $($update.KnowledgebaseArticles))"
+    $updateDetails = "Installed patch: $($update.Title) (KB $($update.KnowledgebaseArticles))"
+    Write-Log $updateDetails
+    foreach ($detail in $update.Details) {
+        Write-Log "    $detail"
+    }
 }
 
 Write-Log "Windows Update installation completed"
 Write-Log "Script finished"
+
+Restart-Computer -Force
