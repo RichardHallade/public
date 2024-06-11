@@ -1,24 +1,34 @@
 #Changes Background
 $wallpaperurl = "https://raw.githubusercontent.com/RichardHallade/public/de7a08056b5f34decd4271b34eef251581440b60/hacking.png"
+# Définir l'URL de l'image
+$imageUrl = "https://raw.githubusercontent.com/RichardHallade/public/de7a08056b5f34decd4271b34eef251581440b60/hacking.png"
 
-Invoke-WebRequest $wallpaperurl -OutFile C:\temp\test.jpg
+# Définir le chemin où l'image sera sauvegardée localement
+$imagePath = "c:\temp\test.png"
 
-$setwallpapersrc = @"
-using System.Runtime.InteropServices;
+# Télécharger l'image
+Invoke-WebRequest -Uri $imageUrl -OutFile $imagePath
 
-public class Wallpaper
-{
-  public const int SetDesktopWallpaper = 20;
-  public const int UpdateIniFile = 0x01;
-  public const int SendWinIniChange = 0x02;
-  [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-  private static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
-  public static void SetWallpaper(string path)
-  {
-    SystemParametersInfo(SetDesktopWallpaper, 0, path, UpdateIniFile | SendWinIniChange);
-  }
-}
+# Définir le fond d'écran
+function Set-Wallpaper {
+    param (
+        [string]$Path
+    )
+    
+    Add-Type @"
+        using System;
+        using System.Runtime.InteropServices;
+        public class Wallpaper {
+            [DllImport("user32.dll", CharSet = CharSet.Auto)]
+            public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+            public const int SPI_SETDESKWALLPAPER = 0x0014;
+            public const int SPIF_UPDATEINIFILE = 0x01;
+            public const int SPIF_SENDWININICHANGE = 0x02;
+        }
 "@
-Add-Type -TypeDefinition $setwallpapersrc
+    
+    [Wallpaper]::SystemParametersInfo(0x0014, 0, $Path, 0x01 -bor 0x02)
+}
 
-[Wallpaper]::SetWallpaper("C:\temp\test.jpg")
+# Appeler la fonction pour définir le fond d'écran
+Set-Wallpaper -Path $imagePath
