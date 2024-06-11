@@ -1,5 +1,4 @@
-#Changes Background  
-#URL For the Image of your choice (Wanna Cry Ransomware Background)
+#Changes Background
 $wallpaperurl = "https://raw.githubusercontent.com/RichardHallade/public/de7a08056b5f34decd4271b34eef251581440b60/hacking.png"
 
 Invoke-WebRequest $wallpaperurl -OutFile C:\temp\test.jpg
