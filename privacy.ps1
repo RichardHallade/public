@@ -116,4 +116,12 @@ try {
     Write-Log "Erreur lors de la détection des mises à jour : $_"
 }
 
+# Redémarrage de l'ordinateur à la fin du script
+Write-Log "Redémarrage de l'ordinateur..."
+try {
+    Restart-Computer -Force
+} catch {
+    Write-Log "Erreur lors du redémarrage de l'ordinateur : $_"
+}
+
 Write-Log "Script terminé. Veuillez vérifier les résultats dans C:\Temp\windows_update_log_advanced.txt"
