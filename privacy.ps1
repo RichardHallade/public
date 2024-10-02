@@ -1,113 +1,119 @@
-# Créer le dossier de log s'il n'existe pas déjà
-$logDir = 'C:\temp'
-if (-not (Test-Path -Path $logDir)) {
-    New-Item -ItemType Directory -Path $logDir
+# Définir le chemin du fichier de log
+$logFile = "C:\Temp\windows_update_log_advanced.txt"
+
+# Créer le dossier C:\Temp s'il n'existe pas
+if (-Not (Test-Path "C:\Temp")) {
+    New-Item -Path "C:\Temp" -ItemType Directory
 }
 
-# Fichier de log
-$logFile = "$logDir\privacy.log"
-
-# Fonction pour écrire dans le fichier de log
+# Fonction pour écrire dans le log
 function Write-Log {
     param (
-        [string]$Message,
-        [string]$Level = "INFO"
+        [string]$message
     )
-    $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-    $logEntry = "$timestamp [$Level] $Message"
-    Add-Content -Path $logFile -Value $logEntry
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "$timestamp - $message"
+    Write-Host $logMessage
+    Add-Content -Path $logFile -Value $logMessage
 }
 
-# Fonction pour supprimer un package Appx et le déprovisionner
-function Remove-AppxPackageAndDeprovision {
-    param (
-        [string]$PackageName,
-        [string]$RegistryKeyPath
-    )
-
-    # Supprimer le package Appx
-    Write-Log "Removing $PackageName..."
-    try {
-        Get-AppxPackage -Name $PackageName | Remove-AppxPackage
-        Write-Log "Successfully removed $PackageName."
-    } catch {
-        Write-Log "Failed to remove $PackageName: $($_.Exception.Message)" "ERROR"
-    }
-
-    # Déprovisionner le package
-    $registryHive = $RegistryKeyPath.Split('\')[0]
-    $registryPath = "$($registryHive):$($RegistryKeyPath.Substring($registryHive.Length))"
-
-    if (Test-Path $registryPath) {
-        Write-Log "Skipping, no action needed, registry path '$registryPath' already exists."
-        return
-    }
-
-    try {
-        New-Item -Path $registryPath -Force -ErrorAction Stop | Out-Null
-        Write-Log "Successfully created the registry key at path '$registryPath'."
-    } catch {
-        Write-Log "Failed to create the registry key at path '$registryPath': $($_.Exception.Message)" "ERROR"
-    }
-}
-
-# Début du script
-Write-Log "Script started."
-
-# Supprimer "Microsoft Windows Client Web Experience"
-Remove-AppxPackageAndDeprovision -PackageName 'MicrosoftWindows.Client.WebExperience' -RegistryKeyPath 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\MicrosoftWindows.Client.WebExperience_cw5n1h2txyewy'
-
-# Supprimer l'icône "Meet Now" de la barre des tâches
-Write-Log "Removing 'Meet Now' icon from taskbar..."
+# Étape 1 : Vérification et correction de la date et de l'heure système
+Write-Log "Vérification et correction de la date et de l'heure système..."
 try {
-    Set-ItemProperty -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer' -Name 'HideSCAMeetNow' -Value 1 -Type DWord
-    Write-Log "'Meet Now' icon removed from taskbar."
-} catch {
-    Write-Log "Failed to remove 'Meet Now' icon: $($_.Exception.Message)" "ERROR"
-}
-
-# Configurer le serveur NTP
-Write-Log "Setting NTP (time) server to 'pool.ntp.org'..."
-try {
-    w32tm /config /syncfromflags:manual /manualpeerlist:"0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org,3.pool.ntp.org"
-    if ((Get-Service -Name w32time).Status -eq 'Running') {
-        Stop-Service -Name w32time
-    }
-    Start-Service -Name w32time
-    w32tm /config /update
     w32tm /resync
-    Write-Log "NTP server configured successfully."
+    Write-Log "Synchronisation de l'heure réussie."
 } catch {
-    Write-Log "Failed to configure NTP server: $($_.Exception.Message)" "ERROR"
+    Write-Log "Erreur lors de la synchronisation de l'heure : $_"
 }
 
-# Liste des packages à supprimer
-$packagesToRemove = @{
-    'king.com.CandyCrushSaga' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\king.com.CandyCrushSaga_kgqvnymyfvs32'
-    'king.com.CandyCrushSodaSaga' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\king.com.CandyCrushSodaSaga_kgqvnymyfvs32'
-    'ShazamEntertainmentLtd.Shazam' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\ShazamEntertainmentLtd.Shazam_pqbynwjfrbcg4'
-    'Flipboard.Flipboard' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\Flipboard.Flipboard_3f5azkryzdbc4'
-    '9E2F88E3.Twitter' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\9E2F88E3.Twitter_wgeqdkkx372wm'
-    'ClearChannelRadioDigital.iHeartRadio' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\ClearChannelRadioDigital.iHeartRadio_a76a11dkgb644'
-    'D5EA27B7.Duolingo-LearnLanguagesforFree' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\D5EA27B7.Duolingo-LearnLanguagesforFree_yx6k7tf7xvsea'
-    'AdobeSystemsIncorporated.AdobePhotoshopExpress' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\AdobeSystemsIncorporated.AdobePhotoshopExpress_ynb6jyjzte8ga'
-    'PandoraMediaInc.29680B314EFC2' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\PandoraMediaInc.29680B314EFC2_n619g4d5j0fnw'
-    '46928bounde.EclipseManager' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\46928bounde.EclipseManager_a5h4egax66k6y'
-    'ActiproSoftwareLLC.562882FEEB491' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\ActiproSoftwareLLC.562882FEEB491_24pqs290vpjk0'
-    'SpotifyAB.SpotifyMusic' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\SpotifyAB.SpotifyMusic_zpdnekdrzrea0'
-    'Microsoft.Appconnector' = 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx\AppxAllUserStore\Deprovisioned\Microsoft.Appconnector_8wekyb3d8bbwe'
+# Étape 2 : Réinitialisation complète des composants Windows Update
+Write-Log "Arrêt des services Windows Update..."
+try {
+    Stop-Service -Name wuauserv -Force -ErrorAction Stop
+    Stop-Service -Name cryptSvc -Force -ErrorAction Stop
+    Stop-Service -Name bits -Force -ErrorAction Stop
+    Stop-Service -Name msiserver -Force -ErrorAction Stop
+
+    Start-Sleep -Seconds 5 # Attendre quelques secondes pour s'assurer que les services sont bien arrêtés
+
+    # Prendre possession du dossier et modifier les permissions
+    takeown /F "C:\Windows\SoftwareDistribution\Download" /R /D Y
+    icacls "C:\Windows\SoftwareDistribution\Download" /grant Administrators:F /T
+
+    # Supprimer les fichiers temporaires de mise à jour
+    Remove-Item -Path "C:\Windows\SoftwareDistribution\*" -Recurse -Force -ErrorAction Stop
+    Write-Log "Fichiers de mise à jour supprimés avec succès."
+} catch {
+    Write-Log "Erreur lors de l'arrêt des services ou de la suppression des fichiers : $_"
 }
 
-# Supprimer les packages spécifiés
-foreach ($package in $packagesToRemove.Keys) {
-    Remove-AppxPackageAndDeprovision -PackageName $package -RegistryKeyPath $packagesToRemove[$package]
+# Étape 3 : Réenregistrement des fichiers DLL Windows Update supplémentaires
+Write-Log "Réenregistrement des fichiers DLL Windows Update..."
+$dlls = @("atl.dll", "urlmon.dll", "mshtml.dll", "shdocvw.dll", "browseui.dll", "jscript.dll", "vbscript.dll", "scrrun.dll", "msxml.dll", "msxml3.dll", "msxml6.dll", "actxprxy.dll", "softpub.dll", "wintrust.dll", "dssenh.dll", "rsaenh.dll", "gpkcsp.dll", "sccbase.dll", "slbcsp.dll", "cryptdlg.dll", "oleaut32.dll", "ole32.dll", "shell32.dll", "wuapi.dll", "wuaueng.dll", "wucltui.dll", "wups.dll", "wups2.dll", "wuweb.dll")
+
+foreach ($dll in $dlls) {
+    try {
+        regsvr32.exe /s $dll
+        Write-Log "Réenregistrement réussi pour : $dll"
+    } catch {
+        Write-Log "Échec du réenregistrement pour : $dll : $_"
+    }
 }
 
-# Fin du script
-Write-Log "Script completed."
+# Étape 4 : Exécution de DISM /Cleanup-Image /ResetBase
+Write-Log "Exécution de DISM avec /ResetBase..."
+try {
+    dism.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase | Out-Null
+    Write-Log "DISM exécuté avec succès."
+} catch {
+    Write-Log "Erreur lors de l'exécution de DISM : $_"
+}
 
-# Pause pour visualiser l'état final
-Read-Host -Prompt "Press Enter to continue..."
+# Vérification du service Windows Update (wuauserv)
+$windowsUpdateStatus = Get-Service -Name wuauserv
+if ($windowsUpdateStatus.Status -ne 'Running') {
+    Write-Log "Le service Windows Update est arrêté. Tentative de démarrage..."
+    try {
+        Start-Service -Name wuauserv -ErrorAction Stop
+        Write-Log "Le service Windows Update a démarré avec succès."
+    } catch {
+        Write-Log "Erreur lors du démarrage du service Windows Update : $_"
+    }
+} else {
+    Write-Log "Le service Windows Update est déjà en cours d'exécution."
+}
 
-# Sortir du script avec succès
-exit 0
+# Vérification du service Windows Installer (msiserver)
+$windowsInstallerStatus = Get-Service -Name msiserver
+if ($windowsInstallerStatus.Status -ne 'Running') {
+    Write-Log "Le service Windows Installer est arrêté. Tentative de démarrage..."
+    try {
+        Start-Service -Name msiserver -ErrorAction Stop
+        Write-Log "Le service Windows Installer a démarré avec succès."
+    } catch {
+        Write-Log "Erreur lors du démarrage du service Windows Installer : $_"
+    }
+} else {
+    Write-Log "Le service Windows Installer est déjà en cours d'exécution."
+}
+
+# Étape 5 : Détection des mises à jour et affichage des correctifs trouvés
+Write-Log "Détection des mises à jour disponibles..."
+try {
+    $updatesSession = New-Object -ComObject Microsoft.Update.Session
+    $updatesSearcher = $updatesSession.CreateUpdateSearcher()
+    $searchResult = $updatesSearcher.Search("IsInstalled=0")
+
+    Write-Log "Nombre de mises à jour trouvées : $($searchResult.Updates.Count)"
+    if ($searchResult.Updates.Count -eq 0) {
+        Write-Log "Aucune mise à jour disponible."
+    } else {
+        foreach ($update in $searchResult.Updates) {
+            Write-Log "Mise à jour trouvée : $($update.Title)"
+        }
+    }
+} catch {
+    Write-Log "Erreur lors de la détection des mises à jour : $_"
+}
+
+Write-Log "Script terminé. Veuillez vérifier les résultats dans C:\Temp\windows_update_log_advanced.txt"
