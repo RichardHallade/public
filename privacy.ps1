@@ -128,7 +128,7 @@ try {
 # Redémarrage de l'ordinateur à la fin du script
 Write-Log "Redémarrage de l'ordinateur..."
 try {
-    Restart-Computer -Force
+    #Restart-Computer -Force
 } catch {
     Write-Log "Erreur lors du redémarrage de l'ordinateur : $_"
 }
