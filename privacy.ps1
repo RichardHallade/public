@@ -41,8 +41,17 @@ try {
     icacls "C:\Windows\SoftwareDistribution\Download" /grant Administrators:F /T
 
     # Supprimer les fichiers temporaires de mise à jour
-    Remove-Item -Path "C:\Windows\SoftwareDistribution\*" -Recurse -Force -ErrorAction Stop
-    Write-Log "Fichiers de mise à jour supprimés avec succès."
+    $downloadPath = "C:\Windows\SoftwareDistribution\Download"
+    Get-ChildItem -Path $downloadPath -Recurse | ForEach-Object {
+        try {
+            Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction Stop
+            Write-Log "Fichier supprimé : $($_.FullName)"
+        } catch {
+            Write-Log "Erreur lors de la suppression de : $($_.FullName) - $_"
+        }
+    }
+
+    Write-Log "Tous les fichiers de mise à jour supprimés (si possible)."
 } catch {
     Write-Log "Erreur lors de l'arrêt des services ou de la suppression des fichiers : $_"
 }
